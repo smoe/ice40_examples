@@ -37,7 +37,7 @@ module uart_tx_8n1 (
             end else if (state == STATE_IDLE) begin
                 // idle at high
                 txbit <= 1'b1;
-                txdone <= 1'b0;
+                txdone <= 1'b1;
             end
         end
 

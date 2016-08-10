@@ -81,7 +81,7 @@ run:
 	sudo screen $(STICKTTY)
 
 run2:	host
-	watch -n 0.2 sudo ./host /dev/ttyUSB1 some almost german-like long word
+	watch -n 0.2 sudo ./host /dev/ttyUSB1 "Let us see if" "the communication is reliable" "period."
 
 clean:
 	rm -f build/* a.out core
