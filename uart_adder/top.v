@@ -7,6 +7,7 @@ module top (
     output wire led2,
     output wire led3,
     output wire led4,
+    output wire led5,
     // UART lines
     output wire tx, 
     input  wire rx
@@ -29,6 +30,7 @@ module top (
     reg ledval2 = 0;
     reg ledval3 = 0;
     reg ledval4 = 0;
+    reg ledval5 = 0;
 
 
    // wire[1:0] state;
@@ -74,15 +76,17 @@ module top (
 
     reg [1:0] bytecount=2'b0;
 
-    parameter STATE_RECEIVING   = 2'b01;
-    parameter STATE_CALCULATING = 2'b10;
-    parameter STATE_SENDING     = 2'b11;
+    parameter STATE_RECEIVING      = 2'b00;
+    parameter STATE_CALCULATING    = 2'b01;
+    parameter STATE_SENDING        = 2'b10;
+    //parameter STATE_SEND_COMPLETED = 2'b11;
 
     parameter write_A      = 2'b00;
     parameter write_B      = 2'b01;
     parameter write_AplusB = 2'b10;
+    parameter write_done = 2'b11;
 
-    reg state=STATE_RECEIVING;
+    reg [1:0] state=STATE_RECEIVING;
 
     always @(posedge clk_9600) begin
 
@@ -101,65 +105,79 @@ module top (
               2'd1: begin
 //              led4=1;
                       vinput[15:8]<=uart_rxbyte;
-                      //state<=STATE_CALCULATING;
-                      state=STATE_SENDING;
+                      state<=STATE_CALCULATING;
                       uart_receive <= 0;
                       // well, the computation could start here already
               end
 
               default: begin
                       // should not be reached
-                      //state=STATE_CALCULATING;
-                      state=STATE_SENDING;
+                      state=STATE_CALCULATING;
               end
               endcase
               bytecount = bytecount+1;
-           led3=0;
-           led4=0;
+           //ledval3=0;
+           //ledval4=0;
            end
         end
 
         STATE_CALCULATING: begin
            bytecount <= write_A;
            uart_receive <= 0;
-           voutput=vinput[15:8]+vinput[7:0];
-           voutput[23:16]=vinput;
+           voutput[8:0]=vinput[15:8]+vinput[7:0];
+           voutput[23:16]=vinput; // overwriting carry bit
            state = STATE_SENDING;
-           led3=1;
+           //ledval3=1;
+           ledval1=0;
         end
 
 
         STATE_SENDING: begin
-           led4=1;
+           //ledval4=1;
 
            uart_receive <= 0;
+           ledval1=0;
+           ledval2=0;
+           ledval3=0;
+           ledval4=0;
+           ledval5=0;
            if (uart_txed) begin
 
             case (bytecount)
 
             write_A: begin
+               ledval1=1;
                uart_send   <= 1;
                bytecount   <= write_B;
-               uart_txbyte <= voutput[23:16];
+               uart_txbyte <= vinput[15:8];
+               state     <= STATE_SENDING;
+               ledval5 <= (8'b0==uart_txbyte);
             end
 
             write_B: begin
+               ledval2=1;
                uart_send   <= 1;
                bytecount   <= write_AplusB;
-               uart_txbyte <= voutput[15:8];
+               uart_txbyte <= vinput[7:0];
+               state     <= STATE_SENDING;
+               ledval5 <= (8'b0==uart_txbyte);
             end
 
             write_AplusB: begin
+               ledval3=1;
                uart_send   <= 1;
-               bytecount   <= 2'd0;
                uart_txbyte <= voutput[7:0];
-               state     = STATE_RECEIVING;
+               bytecount   <= write_done;
+               state     <= STATE_SENDING;
+               ledval5 <= (8'b0==uart_txbyte);
             end
 
-            default: begin
+            write_done: begin
                uart_send <= 0;
+               ledval4=1;
                bytecount <= 2'd0;
                state     = STATE_RECEIVING;
+               ledval5 <= (8'b0==uart_txbyte);
             end
 
             endcase
@@ -172,7 +190,8 @@ module top (
         end
 
         default: begin
-            led4=1;
+            //ledval4=1;
+            state     = STATE_RECEIVING;
         end
 
         endcase
@@ -180,8 +199,12 @@ module top (
     end
 
     // Wiring
-    assign led1=state[0];
-    assign led2=state[1];
+    //assign led1=(state==STATE_RECEIVING);
+    //assign led2=(state==STATE_SENDING);
+    assign led1=ledval1;
+    assign led2=ledval2;
+    assign led3=ledval3;
+    assign led4=ledval4;
     //assign led3=bytecount[0];
     //assign led4=bytecount[1];
 

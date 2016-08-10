@@ -14,12 +14,12 @@
 static const unsigned char cmd[] = "INIT \r";
 static char response[2048];
 
-struct input {
+struct __attribute__((packed)) input {
    char a;
    char b;
 } input;
 
-struct output {
+struct __attribute__((packed)) output {
    char a;
    char b;
    char aplusb;
@@ -34,7 +34,10 @@ char* const write_n_and_read_m (const int device,
 
    int n_read = 0,
        spot_r = 0;
-   char buf = '\0';
+
+
+   fprintf(stderr,"sizeof(struct input):  %d\n",sizeof(struct input));
+   fprintf(stderr,"sizeof(struct output): %d\n",sizeof(struct output));
 
 
    // Write:
@@ -51,9 +54,11 @@ char* const write_n_and_read_m (const int device,
    // Read:
 
    do {
-       n_read = read( device, readtome+n_read, 1 );
+       char buf = '\0';
+       n_read = read( device, &buf, 1 );
+       readtome[spot_r]=buf;
        spot_r += n_read;
-       fprintf(stderr,"Read character! m=%d, n_read=%d, spot_r=%d\n",m,n_read,spot_r);
+       fprintf(stderr,"Read character # %d ! m=%d, n_read=%d, spot_r=%d\n",buf,m,n_read,spot_r);
        
        if (n_read < 0) {
            fprintf(stderr,"Error %d reading: %s\n", errno, strerror(errno));
@@ -62,6 +67,12 @@ char* const write_n_and_read_m (const int device,
            fprintf(stderr,"Read nothing!\n");
        }
    } while ( (m>0 && spot_r<m) || (0==m && writeme[spot_w] != 0));
+
+/*
+   // this works
+   readtome[0]=writeme[0];
+   readtome[1]=writeme[1];
+*/
 
    if (0==m) readtome[spot_r]=0;
    return(readtome);

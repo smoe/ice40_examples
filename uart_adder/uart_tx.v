@@ -37,16 +37,18 @@ module uart_tx_8n1 (
             end else if (state == STATE_IDLE) begin
                 // idle at high
                 txbit <= 1'b1;
-                txdone <= 1'b0;
+                txdone <= 1'b1;
             end
         end
 
         STATE_STARTTX: begin
             txbit <= 1'b0;
             state <= STATE_TXING;
+            txdone <= 1'b0; // redundant
         end
 
 	STATE_TXING: begin
+            txdone <= 1'b0; // redundant
             if (bits_sent < 5'd8) begin
                 txbit <= buf_tx[0];
                 buf_tx <= buf_tx>>1;
